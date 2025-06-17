@@ -1,12 +1,10 @@
 import UIKit
 
-class ViewController: UIViewController {
+final class NewsFeedViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .blue
     }
-
-
 }
 
