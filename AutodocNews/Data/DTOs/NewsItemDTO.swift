@@ -1,11 +1,11 @@
 import Foundation
 
-struct NewsResponseDTO: Codable {
+struct NewsResponseDTO: Decodable {
     let news: [NewsItemDTO]
     let totalCount: Int
 }
 
-struct NewsItemDTO: Codable {
+struct NewsItemDTO: Decodable {
     let id: Int
     let title: String
     let description: String
