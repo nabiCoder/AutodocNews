@@ -1,31 +1,20 @@
 
 import Foundation
 
-enum MappingError: Error {
-    case invalidURL
-    case invalidDate
-}
-
 struct NewsItemMapper {
-    static let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return formatter
-    }()
-
+    
     static func map(_ dto: NewsItemDTO) throws -> NewsItem {
         guard
             let fullUrl = URL(string: dto.fullUrl),
             let titleImageUrl = URL(string: dto.titleImageUrl)
         else {
-            throw MappingError.invalidURL
+            throw AppError.mapping(.invalidURL)
         }
-
-        guard let date = dateFormatter.date(from: dto.publishedDate) else {
-            throw MappingError.invalidDate
+        
+        guard let date = DateFormatters.isoDateTime.date(from: dto.publishedDate) else {
+            throw AppError.mapping(.invalidDate)
         }
-
+        
         return NewsItem(
             id: dto.id,
             title: dto.title,
