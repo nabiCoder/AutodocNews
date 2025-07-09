@@ -1,21 +1,23 @@
 import Foundation
 
 protocol FetchNewsUseCaseProtocol {
-    func execute(page: Int, pageSize: Int) async throws -> [NewsItem]
+    func fetchFirstPage() async throws -> [NewsItem]
+    func fetchNextPage() async throws -> [NewsItem]
 }
 
 final class FetchNewsUseCase: FetchNewsUseCaseProtocol {
-    private let newsService: NewsAPIServiceProtocol
-
-    init(newsService: NewsAPIServiceProtocol) {
-        self.newsService = newsService
+    private let repository: NewsRepositoryProtocol
+    
+    init(repository: NewsRepositoryProtocol) {
+        self.repository = repository
     }
-
-    func execute(page: Int, pageSize: Int) async throws -> [NewsItem] {
-        let items = try await newsService.fetchNews(page: page, pageSize: pageSize)
-        
-        // Можно добавить сортировку, фильтрацию и тд
-        
-        return items
+    
+    func fetchFirstPage() async throws -> [NewsItem] {
+        await repository.resetPagination()
+        return try await repository.fetchNextPage()
+    }
+    
+    func fetchNextPage() async throws -> [NewsItem] {
+        return try await repository.fetchNextPage()
     }
 }

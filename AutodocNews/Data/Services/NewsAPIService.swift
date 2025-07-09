@@ -5,7 +5,6 @@ protocol NewsAPIServiceProtocol {
 }
 
 final class NewsAPIService: NewsAPIServiceProtocol {
-    
     private let client: HTTPClientProtocol
     
     init(client: HTTPClientProtocol) {
@@ -13,15 +12,20 @@ final class NewsAPIService: NewsAPIServiceProtocol {
     }
     
     func fetchNews(page: Int, pageSize: Int) async throws -> [NewsItem] {
+        let request = NewsRequest(page: page, pageSize: pageSize)
+        
         do {
-            let request = NewsRequest(page: page, pageSize: pageSize)
-            let dto = try await client.send(request)
-            return try dto.news.map { try NewsItemMapper.map($0) }
+            let responseDTO = try await client.send(request)
+            return try responseDTO.news.map(NewsItemMapper.map)
         } catch let error as AppError {
-            print("App error: \(error)")
+            #if DEBUG
+            print("AppError: \(error)")
+            #endif
             throw error
         } catch {
-            print("Unexpected error: \(error)")
+            #if DEBUG
+            print("Unexpected Error: \(error)")
+            #endif
             throw AppError.unknown
         }
     }
