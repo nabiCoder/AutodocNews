@@ -1,15 +1,17 @@
 import UIKit
+import os.log
 
-protocol ImageLoading {
+protocol ImageLoadingProtocol {
     func loadImage(from url: URL) async throws -> UIImage
-    mutating func cancelLoad(for url: URL)
+    func cancelLoad(for url: URL)
 }
 
-struct ImageLoader: ImageLoading {
-    
+final class ImageLoader: ImageLoadingProtocol {
     private let cache: ImageCaching
     private let session: URLSession
     private var tasks: [URL: URLSessionDataTask] = [:]
+    private let lock = NSLock()
+    private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "ImageLoader", category: "ImageLoading")
     
     init(cache: ImageCaching = ImageCache.shared, session: URLSession = .shared) {
         self.cache = cache
@@ -17,30 +19,61 @@ struct ImageLoader: ImageLoading {
     }
     
     func loadImage(from url: URL) async throws -> UIImage {
-        // Возвращаем из кэша если уже загружено
-        if let cachedImage = cache.image(forKey: url.absoluteString) {
-            return cachedImage
+        if let cached = cache.image(forKey: url.absoluteString) {
+            logger.debug("Returning cached image for URL: \(url.absoluteString)")
+            return cached
         }
         
-        // Загружаем через URLSession
-        let (data, response) = try await session.data(from: url)
-        
-        guard let httpResponse = response as? HTTPURLResponse,
-              200..<300 ~= httpResponse.statusCode else {
-            throw AppError.imageLoader(.invalidResponse)
+        return try await withCheckedThrowingContinuation { continuation in
+            let request = URLRequest(url: url)
+            let task = session.dataTask(with: request) { [weak self] data, response, error in
+                self?.removeTask(for: url)
+                
+                if let error = error {
+                    self?.logger.error("Failed to load image from \(url.absoluteString): \(error.localizedDescription)")
+                    continuation.resume(throwing: AppError.imageLoader(.networkError(error)))
+                    return
+                }
+                
+                guard let httpResp = response as? HTTPURLResponse, 200..<300 ~= httpResp.statusCode else {
+                    self?.logger.error("Invalid HTTP response when loading image from \(url.absoluteString)")
+                    continuation.resume(throwing: AppError.imageLoader(.invalidResponse))
+                    return
+                }
+                
+                guard let data = data, let image = UIImage(data: data) else {
+                    self?.logger.error("Failed to decode image from data at \(url.absoluteString)")
+                    continuation.resume(throwing: AppError.imageLoader(.failedToDecodeImage))
+                    return
+                }
+                
+                self?.cache.insertImage(image, forKey: url.absoluteString)
+                continuation.resume(returning: image)
+            }
+            
+            storeTask(task, for: url)
+            task.resume()
         }
-        
-        guard let image = UIImage(data: data) else {
-            throw AppError.imageLoader(.failedToDecodeImage)
-        }
-        
-        // Кэшируем изображение
-        cache.insertImage(image, forKey: url.absoluteString)
-        return image
     }
     
-    mutating func cancelLoad(for url: URL) {
+    func cancelLoad(for url: URL) {
+        lock.lock()
+        defer { lock.unlock() }
+        
         tasks[url]?.cancel()
         tasks.removeValue(forKey: url)
+        logger.debug("Cancelled loading image for URL: \(url.absoluteString)")
+    }
+    
+    private func storeTask(_ task: URLSessionDataTask, for url: URL) {
+        lock.lock()
+        tasks[url] = task
+        lock.unlock()
+    }
+    
+    private func removeTask(for url: URL) {
+        lock.lock()
+        tasks.removeValue(forKey: url)
+        lock.unlock()
     }
 }

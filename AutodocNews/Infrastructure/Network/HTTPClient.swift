@@ -5,7 +5,6 @@ protocol HTTPClientProtocol {
 }
 
 final class HTTPClient: HTTPClientProtocol {
-
     private let session: URLSession
     private let decoder: JSONDecoder
 
@@ -26,7 +25,7 @@ final class HTTPClient: HTTPClientProtocol {
         guard (200..<300).contains(httpResponse.statusCode) else {
             throw AppError.network(.serverError(httpResponse.statusCode))
         }
-
+    
         do {
             let decoded = try decoder.decode(T.Response.self, from: data)
             return decoded

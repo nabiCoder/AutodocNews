@@ -7,9 +7,11 @@ protocol ImageCaching {
     func removeAll()
 }
 
-struct ImageCache: ImageCaching {
+final class ImageCache: ImageCaching {
     static let shared = ImageCache()
+    
     private let cache = NSCache<NSString, UIImage>()
+    
     private init() {}
     
     func image(forKey key: String) -> UIImage? {

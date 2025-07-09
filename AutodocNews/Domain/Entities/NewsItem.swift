@@ -7,7 +7,7 @@ struct NewsItem: Identifiable {
     let publishedDate: Date
     let url: String
     let fullUrl: URL
-    let titleImageUrl: URL
+    let titleImageUrl: URL?
     let categoryType: CategoryType
 }
 
@@ -18,17 +18,17 @@ enum CategoryType {
     
     init(from raw: String) {
         switch raw {
-        case NewsCategoryRaw.automotiveNews: self = .automotiveNews
-        case NewsCategoryRaw.companyNews: self = .companyNews
+        case AppConstants.NewsCategoryRaw.automotiveNews: self = .automotiveNews
+        case AppConstants.NewsCategoryRaw.companyNews: self = .companyNews
         default: self = .unknown
         }
     }
     
     var stringValue: String {
         switch self {
-        case .automotiveNews: return NewsCategoryRaw.automotiveNews
-        case .companyNews: return NewsCategoryRaw.companyNews
-        case .unknown: return NewsCategoryRaw.unknown
+        case .automotiveNews: return AppConstants.NewsCategoryRaw.automotiveNews
+        case .companyNews: return AppConstants.NewsCategoryRaw.companyNews
+        case .unknown: return AppConstants.NewsCategoryRaw.unknown
         }
     }
 }
